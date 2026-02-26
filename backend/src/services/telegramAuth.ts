@@ -7,12 +7,63 @@ interface TelegramUserPayload {
   username?: string
 }
 
+const safeDecode = (value: string): string => {
+  try {
+    return decodeURIComponent(value.replace(/\+/g, '%20'))
+  } catch {
+    return value
+  }
+}
+
+const extractRawInitData = (initData: string): string => {
+  const trimmed = initData.trim().replace(/^[?#]/, '')
+
+  if (trimmed.startsWith('tgWebAppData=')) {
+    const encoded = trimmed.slice('tgWebAppData='.length).split('&')[0] ?? ''
+    return safeDecode(encoded)
+  }
+
+  if (trimmed.includes('tgWebAppData=')) {
+    const pairs = trimmed.split('&')
+    const tgPair = pairs.find((pair) => pair.startsWith('tgWebAppData='))
+    if (tgPair) {
+      const encoded = tgPair.slice('tgWebAppData='.length)
+      return safeDecode(encoded)
+    }
+  }
+
+  return trimmed
+}
+
+const parseInitDataPairs = (initData: string): Map<string, string> => {
+  const source = extractRawInitData(initData)
+  const result = new Map<string, string>()
+
+  for (const part of source.split('&')) {
+    if (!part) {
+      continue
+    }
+
+    const delimiterIndex = part.indexOf('=')
+    if (delimiterIndex === -1) {
+      result.set(safeDecode(part), '')
+      continue
+    }
+
+    const key = safeDecode(part.slice(0, delimiterIndex))
+    const value = safeDecode(part.slice(delimiterIndex + 1))
+    result.set(key, value)
+  }
+
+  return result
+}
+
 export const verifyTelegramInitData = (initData: string): TelegramAuthResult => {
   if (!initData) {
     throw new Error('Empty initData')
   }
 
-  const params = new URLSearchParams(initData)
+  const params = parseInitDataPairs(initData)
   const hash = params.get('hash')
   if (!hash) {
     throw new Error('initData missing hash')
