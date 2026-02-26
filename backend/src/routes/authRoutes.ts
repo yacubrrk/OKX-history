@@ -3,9 +3,11 @@ import { resolveUserByInitData } from '../services/userService.js'
 
 export const registerAuthRoutes = async (app: FastifyInstance): Promise<void> => {
   const resolveInitData = (request: FastifyRequest): string => {
+    const header = request.headers['x-telegram-init-data']
+    const headerValue = Array.isArray(header) ? header[0] : header
     const body = request.body as { initData?: string } | undefined
     const query = request.query as { initData?: string } | undefined
-    return body?.initData?.trim() || query?.initData?.trim() || ''
+    return headerValue?.trim() || body?.initData?.trim() || query?.initData?.trim() || ''
   }
 
   const authHandler = async (request: FastifyRequest, reply: FastifyReply) => {

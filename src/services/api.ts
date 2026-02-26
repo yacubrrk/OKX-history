@@ -167,8 +167,10 @@ export const authWithTelegram = async (initData: string): Promise<AuthResponse> 
 
   try {
     data = await request<{ hasApi?: boolean }>('/auth/telegram', {
-      method: 'POST',
-      body: { initData: rawInitData },
+      method: 'GET',
+      headers: {
+        'x-telegram-init-data': rawInitData,
+      },
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : ''
@@ -177,9 +179,11 @@ export const authWithTelegram = async (initData: string): Promise<AuthResponse> 
       throw error
     }
 
-    const encodedInitData = encodeURIComponent(rawInitData)
-    data = await request<{ hasApi?: boolean }>(`/auth/telegram?initData=${encodedInitData}`, {
+    data = await request<{ hasApi?: boolean }>('/miniapp/auth/telegram', {
       method: 'GET',
+      headers: {
+        'x-telegram-init-data': rawInitData,
+      },
     })
   }
 
@@ -214,6 +218,9 @@ export const registerApi = async ({
 
   await request('/api/register', {
     method: 'POST',
+    headers: {
+      'x-telegram-init-data': initData,
+    },
     body: {
       initData,
       apiKey: trimmedApiKey,
@@ -330,6 +337,9 @@ export const syncData = async (): Promise<void> => {
   const initData = readInitDataOrThrow()
   const data = await request<{ status?: 'OK' | 'API_INVALID' }>('/api/sync', {
     method: 'POST',
+    headers: {
+      'x-telegram-init-data': initData,
+    },
     body: { initData },
   })
 
@@ -346,6 +356,9 @@ export const deleteApi = async (): Promise<void> => {
 
   await request('/api/register', {
     method: 'DELETE',
+    headers: {
+      'x-telegram-init-data': initData,
+    },
     body: { initData },
   })
 

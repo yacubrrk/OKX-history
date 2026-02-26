@@ -4,9 +4,15 @@ import { syncUserTrades } from '../services/syncService.js'
 import { resolveUserByInitData } from '../services/userService.js'
 
 export const registerSyncRoutes = async (app: FastifyInstance): Promise<void> => {
-  const syncHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+  const resolveInitData = (request: FastifyRequest): string => {
+    const header = request.headers['x-telegram-init-data']
+    const headerValue = Array.isArray(header) ? header[0] : header
     const body = request.body as { initData?: string } | undefined
-    const initData = body?.initData?.trim() ?? ''
+    return headerValue?.trim() || body?.initData?.trim() || ''
+  }
+
+  const syncHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+    const initData = resolveInitData(request)
 
     if (!initData) {
       return reply.status(400).send({ message: 'initData is required' })
