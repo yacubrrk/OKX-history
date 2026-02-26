@@ -28,8 +28,8 @@ export const SplashPage = () => {
         }
 
         navigate(auth.hasApi ? '/overview' : '/api-register', { replace: true })
-      } catch {
-        setError('Не удалось инициализировать приложение')
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Не удалось инициализировать приложение')
       }
     }
 

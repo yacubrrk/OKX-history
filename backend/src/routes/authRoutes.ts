@@ -16,7 +16,8 @@ export const registerAuthRoutes = async (app: FastifyInstance): Promise<void> =>
         hasApi: Boolean(user.apiConnected && user.encryptedApiKey && user.encryptedSecret),
         onboardingCompleted: true,
       }
-    } catch {
+    } catch (error) {
+      app.log.warn({ err: error }, 'Telegram initData verification failed')
       return reply.status(401).send({ message: 'Invalid Telegram initData' })
     }
   })
