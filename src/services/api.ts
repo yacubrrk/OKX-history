@@ -163,28 +163,35 @@ const request = async <T>(
 
 export const authWithTelegram = async (initData: string): Promise<AuthResponse> => {
   const rawInitData = initData.trim() || readInitDataOrThrow()
-  let data: { hasApi?: boolean }
+  let data: { hasApi?: boolean } | null = null
+  const attempts: Array<{ path: string; method: 'POST' | 'GET' }> = [
+    { path: '/miniapp/auth/telegram', method: 'POST' },
+    { path: '/auth/telegram', method: 'POST' },
+    { path: '/miniapp/auth/telegram', method: 'GET' },
+    { path: '/auth/telegram', method: 'GET' },
+  ]
 
-  try {
-    data = await request<{ hasApi?: boolean }>('/auth/telegram', {
-      method: 'GET',
-      headers: {
-        'x-telegram-init-data': rawInitData,
-      },
-    })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : ''
-
-    if (!message.includes('HTTP 405')) {
-      throw error
+  let lastError: unknown
+  for (const attempt of attempts) {
+    try {
+      data = await request<{ hasApi?: boolean }>(attempt.path, {
+        method: attempt.method,
+        body: attempt.method === 'POST' ? { initData: rawInitData } : undefined,
+        headers:
+          attempt.method === 'GET'
+            ? {
+                'x-telegram-init-data': rawInitData,
+              }
+            : undefined,
+      })
+      break
+    } catch (error) {
+      lastError = error
     }
+  }
 
-    data = await request<{ hasApi?: boolean }>('/miniapp/auth/telegram', {
-      method: 'GET',
-      headers: {
-        'x-telegram-init-data': rawInitData,
-      },
-    })
+  if (!data) {
+    throw lastError instanceof Error ? lastError : new Error('Authentication failed')
   }
 
   return {
