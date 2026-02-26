@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify'
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { env } from '../config/env.js'
 import { clearUserApiCredentials, setUserApiCredentials } from '../db/usersRepo.js'
 import { delCache } from '../services/cache.js'
@@ -7,7 +7,7 @@ import { OkxHttpError, validateOkxCredentials } from '../services/okxClient.js'
 import { resolveUserByInitData } from '../services/userService.js'
 
 export const registerApiKeyRoutes = async (app: FastifyInstance): Promise<void> => {
-  app.post('/api/register', async (request, reply) => {
+  const registerHandler = async (request: FastifyRequest, reply: FastifyReply) => {
     const body = request.body as
       | {
           initData?: string
@@ -57,9 +57,9 @@ export const registerApiKeyRoutes = async (app: FastifyInstance): Promise<void> 
       apiConnected: true,
       cacheTtlSeconds: env.cacheTtlSeconds,
     }
-  })
+  }
 
-  app.delete('/api/register', async (request, reply) => {
+  const removeHandler = async (request: FastifyRequest, reply: FastifyReply) => {
     const body = request.body as { initData?: string } | undefined
     const initData = body?.initData?.trim() ?? ''
 
@@ -81,5 +81,10 @@ export const registerApiKeyRoutes = async (app: FastifyInstance): Promise<void> 
       ok: true,
       apiConnected: false,
     }
-  })
+  }
+
+  app.post('/api/register', registerHandler)
+  app.post('/miniapp/api/register', registerHandler)
+  app.delete('/api/register', removeHandler)
+  app.delete('/miniapp/api/register', removeHandler)
 }

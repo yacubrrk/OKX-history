@@ -1,8 +1,8 @@
-import type { FastifyInstance } from 'fastify'
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { resolveUserByInitData } from '../services/userService.js'
 
 export const registerAuthRoutes = async (app: FastifyInstance): Promise<void> => {
-  app.post('/auth/telegram', async (request, reply) => {
+  const authHandler = async (request: FastifyRequest, reply: FastifyReply) => {
     const body = request.body as { initData?: string } | undefined
     const initData = body?.initData?.trim() ?? ''
 
@@ -21,5 +21,8 @@ export const registerAuthRoutes = async (app: FastifyInstance): Promise<void> =>
       const details = error instanceof Error ? error.message : 'Invalid Telegram initData'
       return reply.status(401).send({ message: details })
     }
-  })
+  }
+
+  app.post('/auth/telegram', authHandler)
+  app.post('/miniapp/auth/telegram', authHandler)
 }

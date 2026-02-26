@@ -137,17 +137,25 @@ const request = async <T>(
     headers?: Record<string, string>
   } = {},
 ): Promise<T> => {
-  const response = await fetch(buildUrl(path), {
-    method: options.method ?? 'GET',
+  const method = options.method ?? 'GET'
+  const requestInit: RequestInit = {
+    method,
     headers: {
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...(options.headers ?? {}),
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
-  })
+  }
+
+  let response = await fetch(buildUrl(path), requestInit)
+
+  if (response.status === 405 && path.startsWith('/') && !path.startsWith('/miniapp/')) {
+    response = await fetch(buildUrl(`/miniapp${path}`), requestInit)
+  }
 
   if (!response.ok) {
-    throw new Error(await parseErrorMessage(response))
+    const details = await parseErrorMessage(response)
+    throw new Error(`${method} ${path}: ${details}`)
   }
 
   return (await response.json()) as T

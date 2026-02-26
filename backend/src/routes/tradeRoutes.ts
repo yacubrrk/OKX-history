@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify'
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { env } from '../config/env.js'
 import { getOverviewStats, listTradesByCursor } from '../db/tradesRepo.js'
 import { getCache, setCache } from '../services/cache.js'
@@ -12,7 +12,7 @@ const getInitDataFromHeader = (value: string | string[] | undefined): string => 
 }
 
 export const registerTradeRoutes = async (app: FastifyInstance): Promise<void> => {
-  app.get('/api/trades', async (request, reply) => {
+  const tradesHandler = async (request: FastifyRequest, reply: FastifyReply) => {
     const initData = getInitDataFromHeader(request.headers['x-telegram-init-data'])
     if (!initData) {
       return reply.status(401).send({ message: 'x-telegram-init-data header is required' })
@@ -53,9 +53,9 @@ export const registerTradeRoutes = async (app: FastifyInstance): Promise<void> =
     } catch {
       return reply.status(401).send({ message: 'Invalid Telegram initData' })
     }
-  })
+  }
 
-  app.get('/api/overview', async (request, reply) => {
+  const overviewHandler = async (request: FastifyRequest, reply: FastifyReply) => {
     const initData = getInitDataFromHeader(request.headers['x-telegram-init-data'])
     if (!initData) {
       return reply.status(401).send({ message: 'x-telegram-init-data header is required' })
@@ -88,5 +88,10 @@ export const registerTradeRoutes = async (app: FastifyInstance): Promise<void> =
     } catch {
       return reply.status(401).send({ message: 'Invalid Telegram initData' })
     }
-  })
+  }
+
+  app.get('/api/trades', tradesHandler)
+  app.get('/miniapp/api/trades', tradesHandler)
+  app.get('/api/overview', overviewHandler)
+  app.get('/miniapp/api/overview', overviewHandler)
 }
