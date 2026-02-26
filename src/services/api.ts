@@ -138,6 +138,7 @@ const request = async <T>(
   } = {},
 ): Promise<T> => {
   const method = options.method ?? 'GET'
+  const url = buildUrl(path)
   const requestInit: RequestInit = {
     method,
     headers: {
@@ -147,10 +148,22 @@ const request = async <T>(
     body: options.body ? JSON.stringify(options.body) : undefined,
   }
 
-  let response = await fetch(buildUrl(path), requestInit)
+  let response: Response
+  try {
+    response = await fetch(url, requestInit)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new Error(`${method} ${path}: ${message}`)
+  }
 
   if (response.status === 405 && path.startsWith('/') && !path.startsWith('/miniapp/')) {
-    response = await fetch(buildUrl(`/miniapp${path}`), requestInit)
+    const fallbackPath = `/miniapp${path}`
+    try {
+      response = await fetch(buildUrl(fallbackPath), requestInit)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(`${method} ${fallbackPath}: ${message}`)
+    }
   }
 
   if (!response.ok) {
@@ -164,34 +177,26 @@ const request = async <T>(
 export const authWithTelegram = async (initData: string): Promise<AuthResponse> => {
   const rawInitData = initData.trim() || readInitDataOrThrow()
   let data: { hasApi?: boolean } | null = null
-  const attempts: Array<{ path: string; method: 'POST' | 'GET' }> = [
+  const attempts: Array<{ path: string; method: 'POST' }> = [
     { path: '/miniapp/auth/telegram', method: 'POST' },
     { path: '/auth/telegram', method: 'POST' },
-    { path: '/miniapp/auth/telegram', method: 'GET' },
-    { path: '/auth/telegram', method: 'GET' },
   ]
 
-  let lastError: unknown
+  const errors: string[] = []
   for (const attempt of attempts) {
     try {
       data = await request<{ hasApi?: boolean }>(attempt.path, {
         method: attempt.method,
-        body: attempt.method === 'POST' ? { initData: rawInitData } : undefined,
-        headers:
-          attempt.method === 'GET'
-            ? {
-                'x-telegram-init-data': rawInitData,
-              }
-            : undefined,
+        body: { initData: rawInitData },
       })
       break
     } catch (error) {
-      lastError = error
+      errors.push(error instanceof Error ? error.message : String(error))
     }
   }
 
   if (!data) {
-    throw lastError instanceof Error ? lastError : new Error('Authentication failed')
+    throw new Error(errors.join(' | ') || 'Authentication failed')
   }
 
   return {
