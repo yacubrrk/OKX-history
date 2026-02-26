@@ -2,9 +2,14 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { resolveUserByInitData } from '../services/userService.js'
 
 export const registerAuthRoutes = async (app: FastifyInstance): Promise<void> => {
-  const authHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+  const resolveInitData = (request: FastifyRequest): string => {
     const body = request.body as { initData?: string } | undefined
-    const initData = body?.initData?.trim() ?? ''
+    const query = request.query as { initData?: string } | undefined
+    return body?.initData?.trim() || query?.initData?.trim() || ''
+  }
+
+  const authHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+    const initData = resolveInitData(request)
 
     if (!initData) {
       return reply.status(400).send({ message: 'initData is required' })
@@ -24,5 +29,7 @@ export const registerAuthRoutes = async (app: FastifyInstance): Promise<void> =>
   }
 
   app.post('/auth/telegram', authHandler)
+  app.get('/auth/telegram', authHandler)
   app.post('/miniapp/auth/telegram', authHandler)
+  app.get('/miniapp/auth/telegram', authHandler)
 }

@@ -163,10 +163,25 @@ const request = async <T>(
 
 export const authWithTelegram = async (initData: string): Promise<AuthResponse> => {
   const rawInitData = initData.trim() || readInitDataOrThrow()
-  const data = await request<{ hasApi?: boolean }>('/auth/telegram', {
-    method: 'POST',
-    body: { initData: rawInitData },
-  })
+  let data: { hasApi?: boolean }
+
+  try {
+    data = await request<{ hasApi?: boolean }>('/auth/telegram', {
+      method: 'POST',
+      body: { initData: rawInitData },
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+
+    if (!message.includes('HTTP 405')) {
+      throw error
+    }
+
+    const encodedInitData = encodeURIComponent(rawInitData)
+    data = await request<{ hasApi?: boolean }>(`/auth/telegram?initData=${encodedInitData}`, {
+      method: 'GET',
+    })
+  }
 
   return {
     hasApi: Boolean(data.hasApi),
