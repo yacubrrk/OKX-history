@@ -107,16 +107,26 @@ const mapTrade = (trade: BackendTrade, index: number): Trade => {
 const buildUrl = (path: string): string => `${API_BASE_URL}${path}`
 
 const parseErrorMessage = async (response: Response): Promise<string> => {
+  const fallback = `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ''}`.trim()
+
+  const raw = await response.text()
+  if (!raw.trim()) {
+    return fallback || 'Request failed'
+  }
+
   try {
-    const data = (await response.json()) as { message?: string }
+    const data = JSON.parse(raw) as { message?: string; error?: string }
     if (data?.message) {
       return data.message
     }
+    if (data?.error) {
+      return data.error
+    }
   } catch {
-    return response.statusText || 'Request failed'
+    return `${fallback}: ${raw.slice(0, 160)}`
   }
 
-  return response.statusText || 'Request failed'
+  return fallback || 'Request failed'
 }
 
 const request = async <T>(

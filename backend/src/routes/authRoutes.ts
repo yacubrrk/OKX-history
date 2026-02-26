@@ -18,7 +18,8 @@ export const registerAuthRoutes = async (app: FastifyInstance): Promise<void> =>
       }
     } catch (error) {
       app.log.warn({ err: error }, 'Telegram initData verification failed')
-      return reply.status(401).send({ message: 'Invalid Telegram initData' })
+      const details = error instanceof Error ? error.message : 'Invalid Telegram initData'
+      return reply.status(401).send({ message: details })
     }
   })
 }
